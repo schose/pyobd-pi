@@ -93,7 +93,7 @@ def connect_port(lsensorlist):
             #(name, value, unit) = lport.sensor(index)
             
             if debug == 1: 
-                name = testme[index][1]
+                name = testme[index][0]
                 value = testme[index][3]
                 unit = testme[index][4]
             else:
@@ -102,7 +102,8 @@ def connect_port(lsensorlist):
             logging.debug("name:%s value:%s unit:%s", name, value, unit)
 
             if name == "Vehicle Speed": 
-                value = (round(float(value)*1.609,2))
+                if value != "NODATA":
+                    value = (round(float(value)*1.609,2))
             if name == "Calc Load Value": 
                 value = round(float(value),2)
 
@@ -111,9 +112,11 @@ def connect_port(lsensorlist):
         url = 'http://splunk.batchworks.de:8890/services/collector/raw'
         payload = json.dumps(outresults)
         headers = {'content-type': 'application/json', 'Accept-Charset': 'UTF-8', 'Authorization': 'Splunk d8d17157-a4d3-4bb2-98cd-e636c5ebc088'}
+        
+        logging.debug("do the reqest to : %s", url )
         r = requests.post(url, data=payload, headers=headers)
 
-        logging.debug("do the curl request")
+        logging.debug("hec response status code: %s", r.status_code )
         time.sleep(1)
 
 if __name__ == "__main__":
@@ -121,7 +124,7 @@ if __name__ == "__main__":
         dp0 = os.path.dirname(__file__)
         logdir = ""
 
-        debug = 1
+        debug = 0
 
         # init logging
         if not logdir:
@@ -143,7 +146,7 @@ if __name__ == "__main__":
 
         logging.debug("logfile started at %s", logfilename)
 
-        logitems = ["rpm", "speed", "load"]
+        logitems = ["rpm", "speed", "load", "fuel_status", "temp", "fuel_pressure","engine_time","engine_mil_time","throttle_pos"]
         
         sensorlist = []
         sensorlist = add_log_item(logitems)
