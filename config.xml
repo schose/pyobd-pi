@@ -1,0 +1,7 @@
+<?xml version="1.0"?>
+<obdscript>
+        <Method>csv</Method>
+        <HECurl>https://www.batchworks.de:8090</HECurl>
+        <HECtoken>d8d17157-a4d3-4bb2-98cd-e636c5ebc088</HECtoken>
+        <Logdir>logs</Logdir>
+</obdscript>

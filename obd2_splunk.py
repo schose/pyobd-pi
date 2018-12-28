@@ -12,7 +12,36 @@ import logging
 from obd_utils import scanSerial
 import requests
 import json
+import xml.etree.ElementTree as etree
+import csv
 
+
+def get_config():
+    
+    lconf = {}
+    # get configs
+
+    dp0 = os.path.dirname(os.path.realpath(__file__))
+    xmlfile = os.path.join(dp0, "config.xml")
+
+    if not os.path.isfile(xmlfile):
+        print ("%s not found", xmlfile)
+        exit(-1)
+
+    myxml = etree.parse(xmlfile)
+    xmlroot = myxml.getroot()
+
+    for child in xmlroot:
+        if child.tag == "Method":
+            lconf["Method"] = child.text
+        elif child.tag == "HECurl":
+            lconf["HECurl"] = child.text
+        elif child.tag == "HECtoken":
+            lconf["HECtoken"] = (child.text).lower()
+        elif child.tag == "Logdir":
+            lconf["Logdir"] = child.text.lower()
+            
+    return lconf
 
 def add_log_item(llogitems):
     
@@ -26,6 +55,33 @@ def add_log_item(llogitems):
                     break
 
     return lsensorlist
+
+def output_results(lresults):
+    # write results using csv to stdout
+    writer = csv.DictWriter(sys.stdout, fieldnames=logitems)
+    writer.writeheader()
+
+    # write results using csv to csv
+    # print len(lresults)
+    # dp0 = os.path.dirname(__file__)
+    # csvfilename = os.path.join(dp0,'../lookups/commandips.new.csv')
+    # with open(csvfilename, 'w') as csvfile:
+    #   writer = csv.DictWriter(csvfile, fieldnames=resultheaders)
+    #   if len(lresults) > 1000:
+    #     writer.writeheader()
+    #     writer.writerows(lresults)
+	# os.rename('../lookups/test.new.csv','../lookups/test.csv')
+    #print lresults
+
+def getResultHeaders(lresultarr):
+
+    lresultheader = []
+    ldicttemp = lresultarr[0]
+    #print ldicttemp
+    for key in ldicttemp.keys():
+         lresultheader.append(key)
+
+    return lresultheader
 
 def connect_port(lsensorlist):
     logging.debug("in connect_port ")
@@ -85,46 +141,82 @@ def connect_port(lsensorlist):
     ("engine_mil_time"       , "Engine Run MIL"				, "014D" , "100","min"    ),
         ]
 
+
+
+    if conf["Method"] == "csv": 
+        logdir = conf["Logdir"]
+        csvlogfilename = os.path.join(logdir, ("obd_metrics_" + tmp.strftime("%Y%d%m-%H%M%S") +".csv" ) )
+        logging.debug("logging to csv at %s", csvlogfilename )
+
+        with open(csvlogfilename, 'wb') as csvfile:  # Just use 'w' mode in 3.x
+            llogitems = ['time']
+            llogitems = llogitems + logitems
+            cvswriter = csv.DictWriter(csvfile, llogitems)
+            cvswriter.writeheader()
+        
     while 1:
 
         outresults = {}
 
         for index in lsensorlist:
             #(name, value, unit) = lport.sensor(index)
-            
+            #         
             if debug == 1: 
                 name = testme[index][0]
                 value = testme[index][3]
                 unit = testme[index][4]
             else:
                 (name, value, unit) = lport.sensor(index)
+                name = obd_sensors.SENSORS[index].shortname
 
-            logging.debug("name:%s value:%s unit:%s", name, value, unit)
+            #logging.debug("name:%s value:%s unit:%s", name, value, unit)
 
             if name == "Vehicle Speed": 
                 if value != "NODATA":
                     value = (round(float(value)*1.609,2))
             if name == "Calc Load Value": 
                 value = round(float(value),2)
+            if name == "Coolant Temp":
+                value = (value-32)*5/9
+            if name == "Intake Air Temp":
+                value = (value-32)*5/9
+            if value == "NODATA":
+                value = ""
+            if value == "NORESPONSE":
+                value = ""
 
-            outresults[name] = value; 
+            outresults[name] = value
 
-        url = 'http://splunk.batchworks.de:8890/services/collector/raw'
-        payload = json.dumps(outresults)
-        headers = {'content-type': 'application/json', 'Accept-Charset': 'UTF-8', 'Authorization': 'Splunk d8d17157-a4d3-4bb2-98cd-e636c5ebc088'}
+        if conf["Method"] == "hec":
+            url = 'http://splunk.batchworks.de:8890/services/collector/raw'
+            payload = json.dumps(outresults)
+            headers = {'content-type': 'application/json', 'Accept-Charset': 'UTF-8', 'Authorization': 'Splunk d8d17157-a4d3-4bb2-98cd-e636c5ebc088'}
+            
+            logging.debug("do the reqest to : %s", url )
+            r = requests.post(url, data=payload, headers=headers)
+
+            logging.debug("hec response status code: %s", r.status_code )
         
-        logging.debug("do the reqest to : %s", url )
-        r = requests.post(url, data=payload, headers=headers)
+        if conf["Method"] == "csv": 
+            tmp1 = datetime.now()
+            millis = int(round(time.time() * 1000))
+            outresults["time"] = tmp1.strftime("%F %T") + "." + str(tmp1.microsecond)
+            with open(csvlogfilename, 'a') as csvfile:  # Just use 'w' mode in 3.x
+                cvswriter = csv.DictWriter(csvfile, llogitems)
+                cvswriter.writerow(outresults)
 
-        logging.debug("hec response status code: %s", r.status_code )
-        time.sleep(1)
+        logging.debug(".")
+        time.sleep(0.5)
 
 if __name__ == "__main__":
     try: 
         dp0 = os.path.dirname(__file__)
         logdir = ""
+        conf = {}
 
-        debug = 0
+        debug = 1
+
+        conf = get_config()
 
         # init logging
         if not logdir:
@@ -146,8 +238,9 @@ if __name__ == "__main__":
 
         logging.debug("logfile started at %s", logfilename)
 
-        logitems = ["rpm", "speed", "load", "fuel_status", "temp", "fuel_pressure","engine_time","engine_mil_time","throttle_pos"]
-        
+        #logitems = ["rpm", "speed", "load", "fuel_status", "temp", "fuel_pressure","engine_time","engine_mil_time","throttle_pos"]
+        logitems = ["temp","intake_air_temp","load","maf","manifold_pressure","obd_standard","rpm","speed"]
+ 
         sensorlist = []
         sensorlist = add_log_item(logitems)
 
