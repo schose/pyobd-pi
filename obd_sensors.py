@@ -22,6 +22,13 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 ###########################################################################
 
+def is_hex(s):
+    try:
+        int(s, 16)
+        return True
+    except ValueError:
+        return False
+
 def hex_to_int(str):
     i = eval("0x" + str, {}, {})
     return i
@@ -59,9 +66,13 @@ def sec_to_min(code):
     return code / 60
 
 def temp(code):
-    code = hex_to_int(code)
-    c = code - 40 
-    return 32 + (9 * c / 5) 
+    if is_hex(code):
+        code = hex_to_int(code)
+        c = code - 40 
+        c_new = 32 + (9 * c / 5) 
+    else:
+        c_new = 0
+    return c_new
 
 def cpass(code):
     #fixme
@@ -170,6 +181,10 @@ SENSORS = [
     Sensor("aux_input"             , "Aux input status"				, "011E" , cpass            ,""       ),
     Sensor("engine_time"           , "Engine Start MIN"				, "011F" , sec_to_min       ,"min"    ),
     Sensor("engine_mil_time"       , "Engine Run MIL"				, "014D" , sec_to_min       ,"min"    ),
+    Sensor("vin"                   , "Vehicle Identication Number"	, "0902" , cpass            ,""    ),
+    Sensor("fuel_consumption"      , "Fuel Consumption Rate" 	    , "015E" , cpass            ,""    ),
+    Sensor("fuel_level"            , "Fuel Level" 	                , "012F" , cpass            ,""    )
+
     ]
      
     

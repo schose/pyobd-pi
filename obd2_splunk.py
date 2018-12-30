@@ -214,7 +214,7 @@ if __name__ == "__main__":
         logdir = ""
         conf = {}
 
-        debug = 1
+        debug = 0
 
         conf = get_config()
 
@@ -239,7 +239,7 @@ if __name__ == "__main__":
         logging.debug("logfile started at %s", logfilename)
 
         #logitems = ["rpm", "speed", "load", "fuel_status", "temp", "fuel_pressure","engine_time","engine_mil_time","throttle_pos"]
-        logitems = ["temp","intake_air_temp","load","maf","manifold_pressure","obd_standard","rpm","speed"]
+        logitems = ["temp","intake_air_temp","load","maf","manifold_pressure","obd_standard","rpm","speed","vin","fuel_level","fuel_consumption"]
  
         sensorlist = []
         sensorlist = add_log_item(logitems)
