@@ -169,7 +169,7 @@ def connect_port(lsensorlist):
                 (name, value, unit) = lport.sensor(index)
                 name = obd_sensors.SENSORS[index].shortname
 
-            #logging.debug("name:%s value:%s unit:%s", name, value, unit)
+            logging.debug("name:%s value:%s unit:%s", name, value, unit)
 
             if name == "Vehicle Speed": 
                 if value != "NODATA":
@@ -239,7 +239,7 @@ if __name__ == "__main__":
         logging.debug("logfile started at %s", logfilename)
 
         #logitems = ["rpm", "speed", "load", "fuel_status", "temp", "fuel_pressure","engine_time","engine_mil_time","throttle_pos"]
-        logitems = ["temp","intake_air_temp","load","maf","manifold_pressure","obd_standard","rpm","speed","vin","fuel_level","fuel_consumption"]
+        logitems = ["temp","intake_air_temp","load","maf","manifold_pressure","obd_standard","rpm","speed","vin","fuel_level","fuel_consumption","fuel_type"]
  
         sensorlist = []
         sensorlist = add_log_item(logitems)
@@ -250,3 +250,6 @@ if __name__ == "__main__":
     except Exception:
         import traceback
         traceback.print_exc(file=sys.stdout)
+
+
+# rsync test3

@@ -183,8 +183,8 @@ SENSORS = [
     Sensor("engine_mil_time"       , "Engine Run MIL"				, "014D" , sec_to_min       ,"min"    ),
     Sensor("vin"                   , "Vehicle Identication Number"	, "0902" , cpass            ,""    ),
     Sensor("fuel_consumption"      , "Fuel Consumption Rate" 	    , "015E" , cpass            ,""    ),
-    Sensor("fuel_level"            , "Fuel Level" 	                , "012F" , cpass            ,""    )
-
+    Sensor("fuel_level"            , "Fuel Level" 	                , "012F" , cpass            ,""    ),
+    Sensor("fuel_type"            , "Fuel Type" 	                , "0151" , cpass            ,""    )
     ]
      
     
