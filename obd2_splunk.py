@@ -110,19 +110,19 @@ def connect_port(lsensorlist):
     ("dtc_status"            , "S-S DTC Cleared"				, "0101" , "100",""       ),    
     ("dtc_ff"                , "DTC C-F-F"					, "0102" , "100",""       ),      
     ("fuel_status"           , "Fuel System Stat"				, "0103" , "100",""       ),
-    ("load"                  , "Calc Load Value"				, "01041", "100",""       ),    
-    ("temp"                  , "Coolant Temp"					, "0105" , "100","F"      ),
+    ("load"                  , "Calc Load Value"				, "01041", 100,""       ),    
+    ("temp"                  , "Coolant Temp"					, "0105" , 200,"F"      ),
     ("short_term_fuel_trim_1", "S-T Fuel Trim"				, "0106" , "100","%"      ),
     ("long_term_fuel_trim_1" , "L-T Fuel Trim"				, "0107" , "100","%"      ),
     ("short_term_fuel_trim_2", "S-T Fuel Trim"				, "0108" , "100","%"      ),
     ("long_term_fuel_trim_2" , "L-T Fuel Trim"				, "0109" , "100","%"      ),
     ("fuel_pressure"         , "FuelRail Pressure"			, "010A" , "100",""       ),
-    ("manifold_pressure"     , "Intk Manifold"				, "010B" , "100","psi"    ),
+    ("manifold_pressure"     , "Intk Manifold"				, "010B" , 100,"psi"    ),
     ("rpm"                   , "Engine RPM"					, "010C1", "100",""       ),
     ("speed"                 , "Vehicle Speed"				, "010D1", "33","MPH"    ),
     ("timing_advance"        , "Timing Advance"				, "010E" , "100","degrees"),
-    ("intake_air_temp"       , "Intake Air Temp"				, "010F" , "100","F"      ),
-    ("maf"                   , "AirFlow Rate(MAF)"			, "0110" , "100","lb/min" ),
+    ("intake_air_temp"       , "Intake Air Temp"				, "010F" , 100,"F"      ),
+    ("maf"                   , "AirFlow Rate(MAF)"			, "0110" , 100,"lb/min" ),
     ("throttle_pos"          , "Throttle Position"			, "01111", "100","%"      ),
     ("secondary_air_status"  , "2nd Air Status"				, "0112" , "100",""       ),
     ("o2_sensor_positions"   , "Loc of O2 sensors"			, "0113" , "100",""       ),
@@ -139,6 +139,8 @@ def connect_port(lsensorlist):
     ("aux_input"             , "Aux input status"				, "011E" , "100",""       ),
     ("engine_time"           , "Engine Start MIN"				, "011F" , "100","min"    ),
     ("engine_mil_time"       , "Engine Run MIL"				, "014D" , "100","min"    ),
+    ("vin"                  , "Vehicle Identication Number"				, "0902" , ":4902015742411:505837313031302:43313031323731",""    ),
+
         ]
 
 
@@ -154,6 +156,7 @@ def connect_port(lsensorlist):
             cvswriter = csv.DictWriter(csvfile, llogitems)
             cvswriter.writeheader()
         
+    n = 0
     while 1:
 
         outresults = {}
@@ -169,22 +172,27 @@ def connect_port(lsensorlist):
                 (name, value, unit) = lport.sensor(index)
                 name = obd_sensors.SENSORS[index].shortname
 
-            logging.debug("name:%s value:%s unit:%s", name, value, unit)
 
-            if name == "Vehicle Speed": 
+            if name == "speed": 
                 if value != "NODATA":
                     value = (round(float(value)*1.609,2))
-            if name == "Calc Load Value": 
+            if name == "load": 
                 value = round(float(value),2)
-            if name == "Coolant Temp":
-                value = (value-32)*5/9
-            if name == "Intake Air Temp":
-                value = (value-32)*5/9
+            if name == "temp":
+                value = round(float((value-32)*5/9),2)
+            if name == "intake_air_temp":
+                value = round(float((value-32)*5/9),2)
+            if name == "manifold_pressure":
+                value = round(float((value-32)*5/9),2)
+            if name == "maf":
+                value = round(float((value-32)*5/9),2)
             if value == "NODATA":
                 value = ""
             if value == "NORESPONSE":
                 value = ""
 
+            #logging.debug("name:%s value:%s unit:%s", name, value, unit)
+            
             outresults[name] = value
 
         if conf["Method"] == "hec":
@@ -201,9 +209,16 @@ def connect_port(lsensorlist):
             tmp1 = datetime.now()
             millis = int(round(time.time() * 1000))
             outresults["time"] = tmp1.strftime("%F %T") + "." + str(tmp1.microsecond)
+
+            # write every 10th entry.
+            n = n + 1
+            if (n % 10) == 0: 
+                logging.debug("name:%s", outresults)
+
             with open(csvlogfilename, 'a') as csvfile:  # Just use 'w' mode in 3.x
                 cvswriter = csv.DictWriter(csvfile, llogitems)
                 cvswriter.writerow(outresults)
+
 
         logging.debug(".")
         time.sleep(0.5)
@@ -214,7 +229,7 @@ if __name__ == "__main__":
         logdir = ""
         conf = {}
 
-        debug = 0
+        debug = 1
 
         conf = get_config()
 
@@ -239,7 +254,9 @@ if __name__ == "__main__":
         logging.debug("logfile started at %s", logfilename)
 
         #logitems = ["rpm", "speed", "load", "fuel_status", "temp", "fuel_pressure","engine_time","engine_mil_time","throttle_pos"]
-        logitems = ["temp","intake_air_temp","load","maf","manifold_pressure","obd_standard","rpm","speed","vin","fuel_level","fuel_consumption","fuel_type"]
+        logitems = ["temp","intake_air_temp","load","maf","manifold_pressure","obd_standard","rpm","speed","vin"]
+       # logitems = ["temp","intake_air_temp","load","maf","manifold_pressure","obd_standard","rpm","speed","vin","fuel_level","throttle_pos","engine_mil_time","fuel_status"]
+        #,"fuel_consumption","fuel_type","engine_mil_time"
  
         sensorlist = []
         sensorlist = add_log_item(logitems)
